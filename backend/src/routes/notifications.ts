@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { getUser } from "../middleware/auth.js";
+import { routeParam } from "../lib/errors.js";
 
 export const notificationsRouter = Router();
 
@@ -23,7 +24,7 @@ notificationsRouter.patch("/:id/read", async (req, res, next) => {
   try {
     const user = getUser(req);
     await prisma.notification.updateMany({
-      where: { id: req.params.id, userId: user.sub },
+      where: { id: routeParam(req.params.id), userId: user.sub },
       data: { read: true },
     });
     const unreadCount = await prisma.notification.count({

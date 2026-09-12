@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { getUser, requireRoles } from "../middleware/auth.js";
 import { createTaskSchema, taskFilterSchema, updateTaskSchema } from "../lib/validators.js";
 import { assertProjectAccess, assertTaskAccess, taskWhereForRole } from "../lib/access.js";
-import { forbidden, notFound } from "../lib/errors.js";
+import { forbidden, notFound, routeParam } from "../lib/errors.js";
 import { recordActivity } from "../lib/activity.js";
 import { notifyUser } from "../lib/notify.js";
 import { emitTaskUpdated } from "../realtime/socket.js";
@@ -56,7 +56,7 @@ tasksRouter.get("/", async (req, res, next) => {
 tasksRouter.post("/projects/:projectId", requireRoles("ADMIN", "PROJECT_MANAGER"), async (req, res, next) => {
   try {
     const user = getUser(req);
-    const project = await assertProjectAccess(user, req.params.projectId);
+    const project = await assertProjectAccess(user, routeParam(req.params.projectId, "projectId"));
     const body = createTaskSchema.parse(req.body);
     if (user.role === "PROJECT_MANAGER" && project.createdById !== user.sub) {
       throw forbidden();
@@ -138,7 +138,7 @@ tasksRouter.post("/projects/:projectId", requireRoles("ADMIN", "PROJECT_MANAGER"
 tasksRouter.get("/:id", async (req, res, next) => {
   try {
     const user = getUser(req);
-    const task = await assertTaskAccess(user, req.params.id);
+    const task = await assertTaskAccess(user, routeParam(req.params.id));
     const full = await prisma.task.findUnique({
       where: { id: task.id },
       include: taskInclude,
@@ -152,7 +152,7 @@ tasksRouter.get("/:id", async (req, res, next) => {
 tasksRouter.patch("/:id", async (req, res, next) => {
   try {
     const user = getUser(req);
-    const existing = await assertTaskAccess(user, req.params.id);
+    const existing = await assertTaskAccess(user, routeParam(req.params.id));
     const body = updateTaskSchema.parse(req.body);
 
     if (user.role === "DEVELOPER") {

@@ -4,7 +4,7 @@ import { getUser, requireRoles } from "../middleware/auth.js";
 import { createProjectSchema } from "../lib/validators.js";
 import { assertProjectAccess, projectWhereForRole } from "../lib/access.js";
 import { joinProjectRoom } from "../realtime/socket.js";
-import { notFound } from "../lib/errors.js";
+import { notFound, routeParam } from "../lib/errors.js";
 
 export const projectsRouter = Router();
 
@@ -55,9 +55,10 @@ projectsRouter.post("/", requireRoles("ADMIN", "PROJECT_MANAGER"), async (req, r
 projectsRouter.get("/:id", async (req, res, next) => {
   try {
     const user = getUser(req);
-    await assertProjectAccess(user, req.params.id);
+    const projectId = routeParam(req.params.id);
+    await assertProjectAccess(user, projectId);
     const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
+      where: { id: projectId },
       include: {
         client: true,
         createdBy: { select: { id: true, name: true, role: true } },
@@ -69,7 +70,7 @@ projectsRouter.get("/:id", async (req, res, next) => {
       },
     });
     try {
-      joinProjectRoom(user.sub, req.params.id);
+      joinProjectRoom(user.sub, projectId);
     } catch {
       // sockets optional during tests
     }
