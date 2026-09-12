@@ -14,10 +14,14 @@ function required(name: string): string {
   return value;
 }
 
+function normalizeOrigin(value: string) {
+  return value.trim().replace(/\/$/, "");
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
-  clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
+  clientOrigin: normalizeOrigin(process.env.CLIENT_ORIGIN ?? "http://localhost:5173"),
   databaseUrl: required("DATABASE_URL"),
   jwtAccessSecret: required("JWT_ACCESS_SECRET"),
   jwtRefreshSecret: required("JWT_REFRESH_SECRET"),
@@ -25,3 +29,15 @@ export const env = {
   refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 7),
   cookieSecure: process.env.COOKIE_SECURE === "true",
 };
+
+export function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) return true;
+  const normalized = normalizeOrigin(origin);
+  const configured = env.clientOrigin.split(",").map(normalizeOrigin);
+  if (configured.includes(normalized)) return true;
+  try {
+    return new URL(normalized).hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}

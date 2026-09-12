@@ -1,6 +1,6 @@
 import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
-import { env } from "../config.js";
+import { isAllowedOrigin } from "../config.js";
 import { verifyAccessToken } from "../lib/jwt.js";
 import type { ActivityEvent, Role } from "@prisma/client";
 
@@ -25,7 +25,13 @@ export function onlineUserCount(): number {
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: env.clientOrigin,
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error("Not allowed by CORS"));
+      },
       credentials: true,
     },
   });
